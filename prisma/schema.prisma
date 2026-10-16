@@ -1,0 +1,43 @@
+datasource db {
+  provider  = "postgresql"
+  url       = "postgresql://postgres.wuetpmnoaunbnbrxbdky:1ZTEo40twTc4kUYH@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+  directUrl = "postgresql://postgres.wuetpmnoaunbnbrxbdky:1ZTEo40twTc4kUYH@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+}
+// 👤 جدول المستخدمين
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reviews Review[]
+}
+
+// 📝 جدول مراجعات الأكواد
+model Review {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title          String?
+  originalCode   String   @db.Text
+  language       String
+  target         String
+  uiLang         String
+
+  refactoredCode String?  @db.Text
+  vocabulary     Json?
+  explanation    String?  @db.Text
+
+  isPublic       Boolean  @default(false)
+  isStarred      Boolean  @default(false)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isPublic])
+}
