@@ -13,7 +13,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      appearance={{
+        elements: {
+          logoImage: {
+            src: "/logo.png",
+          },
+        },
+      }}
+    >
       <html lang="en">
         <body>{children}</body>
       </html>

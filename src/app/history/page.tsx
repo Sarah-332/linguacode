@@ -1,101 +1,153 @@
-import { Suspense } from 'react';
-import { auth } from '@clerk/nextjs/server';
-import { UserButton } from '@clerk/nextjs';
-import { PrismaClient } from '@prisma/client';
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import ReviewCard from './ReviewCard';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
-const prisma = globalForPrisma.prisma ?? new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
-
-// 1. المكون الفرعي الذي يجلب البيانات من قاعدة البيانات
-async function HistoryContent({ searchParams }: { searchParams: Promise<{ target?: string; page?: string }> }) {
-  const { userId } = await auth();
-  if (!userId) {
-    return <div className="p-8 text-center text-white"><p>Please sign in to view history.</p></div>;
-  }
-
-  const user = await prisma.user.findUnique({ where: { clerkId: userId } });
-  if (!user) return <div className="p-8 text-center text-white"><p>User not found.</p></div>;
-
-  const resolvedParams = await searchParams;
-  const targetFilter = resolvedParams?.target || 'all';
-  const pageNum = parseInt(resolvedParams?.page || '1', 10);
-  const pageSize = 20;
-
-  const where: any = { userId: user.id };
-  if (targetFilter !== 'all') {
-    where.target = targetFilter;
-  }
-
-  const [reviews, total] = await Promise.all([
-    prisma.review.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      skip: (pageNum - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.review.count({ where }),
-  ]);
-
-  return (
-    <>
-      {/* Filter buttons */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {['all', 'faang', 'opensource', 'microsoft', 'startup'].map((target) => (
-          <Link
-            key={target}
-            href={`/history?target=${target}`}
-            className={`px-4 py-1.5 rounded text-sm font-medium transition ${
-              targetFilter === target
-                ? 'bg-indigo-600 text-white'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            {target === 'all' ? '📋 All' : target === 'faang' ? '🏢 FAANG' : target === 'opensource' ? '🌐 Open‑Source' : target === 'microsoft' ? '🏢 Enterprise' : '🚀 Startup'}
-          </Link>
-        ))}
-      </div>
-
-      {/* Reviews list */}
-      {reviews.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">
-          <p className="text-lg">No reviews found.</p>
-          <Link href="/" className="text-indigo-400 underline mt-2 inline-block">Review your first code snippet</Link>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {reviews.map((review: any) => (
-            <ReviewCard key={review.id} review={{...review, createdAt: review.createdAt.toISOString()}} onDelete={() => {}} />
-          ))}
-        </div>
-      )}
-    </>
-  );
+interface HistoryItem {
+  id: string;
+  code: string;
+  language: string;
+  target: string;
+  refactored_code?: string;
+  interview_pitch?: string;
+  createdAt: string;
 }
 
-// 2. الصفحة الرئيسية مغلفة بـ Suspense
-export default function HistoryPage({ searchParams }: { searchParams: Promise<{ target?: string; page?: string }> }) {
+export default function HistoryPage() {
+  const { isSignedIn, isLoaded } = useAuth();
+  const router = useRouter();
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch('/api/history');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setHistory(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      fetchHistory();
+    } else if (isLoaded && !isSignedIn) {
+      setLoading(false);
+    }
+  }, [isLoaded, isSignedIn]);
+
+  // دالة إعادة الاستخدام
+  const handleReuse = (item: HistoryItem) => {
+    // يمكن حفظ الكود واللغة ليتم ملؤهما في الصفحة الرئيسية
+    localStorage.setItem('linguacode-reuse-code', item.code);
+    localStorage.setItem('linguacode-reuse-lang', item.language);
+    router.push('/');
+  };
+
+  // دالة حذف عنصر محدد
+  const handleDelete = async (id: string) => {
+    if (!confirm('هل أنت متاكد من حذف هذا السجل؟')) return;
+    try {
+      const res = await fetch(`/api/history?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setHistory(prev => prev.filter(item => item.id !== id));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // دالة مسح السجل بالكامل
+  const handleClearAll = async () => {
+    if (!confirm('هل أنت متاكد من مسح جميع السجلات؟')) return;
+    try {
+      const res = await fetch('/api/history?all=true', { method: 'DELETE' });
+      if (res.ok) {
+        setHistory([]);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (!isLoaded || loading) {
+    return (
+      <main style={{ minHeight: '100vh', background: '#0f172a', color: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <p>جاري تحميل السجل...</p>
+      </main>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-900 text-white p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
-          <h1 className="text-3xl font-bold text-indigo-400">📊 Linguacode History</h1>
-          <div className="flex gap-4 items-center">
-            <Link href="/" className="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded transition">
-              ➕ New Review
-            </Link>
-            <UserButton />
-          </div>
+    <main style={{
+      minHeight: '100vh',
+      background: 'radial-gradient(circle at top, #1e1b4b 0%, #0f172a 100%)',
+      color: '#f8fafc',
+      padding: '32px 16px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    }}>
+      <div style={{ width: '100%', maxWidth: '900px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <Link href="/" style={{ color: '#38bdf8', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 'bold' }}>
+            ← العودة للرئيسية
+          </Link>
+          <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', margin: 0, color: '#818cf8' }}>📊 سجل المراجعات</h1>
+          {history.length > 0 && (
+            <button
+              onClick={handleClearAll}
+              style={{ background: 'rgba(244, 63, 94, 0.2)', border: '1px solid #f43f5e', color: '#fca5a5', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}
+            >
+              🗑️ مسح الكل
+            </button>
+          )}
         </div>
 
-        {/* تغليف استدعاء البيانات بـ Suspense لحل المشكلة */}
-        <Suspense fallback={<div className="text-center py-12 text-slate-400">Loading history...</div>}>
-          <HistoryContent searchParams={searchParams} />
-        </Suspense>
+        {history.length === 0 ? (
+          <div style={{ background: 'rgba(30, 41, 59, 0.7)', padding: '40px', borderRadius: '12px', textAlign: 'center', color: '#94a3b8' }}>
+            لا يوجد سجلات مراجعة سابقة بعد.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {history.map((item) => (
+              <div key={item.id} style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#38bdf8', fontWeight: 'bold' }}>
+                    {item.language.toUpperCase()} • {new Date(item.createdAt).toLocaleDateString()}
+                  </span>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => handleReuse(item)}
+                      style={{ background: '#6366f1', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}
+                    >
+                      🔄 إعادة استخدام
+                    </button>
+                    <button
+                      onClick={() => handleDelete(item.id)}
+                      style={{ background: 'transparent', color: '#f43f5e', border: '1px solid #f43f5e', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}
+                    >
+                      🗑️ حذف
+                    </button>
+                  </div>
+                </div>
+
+                <pre style={{ background: '#0f172a', padding: '10px', borderRadius: '6px', color: '#cbd5e1', fontSize: '0.85rem', overflowX: 'auto', margin: 0 }}>
+                  {item.code.slice(0, 150)}{item.code.length > 150 ? '...' : ''}
+                </pre>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-    </div>
+    </main>
   );
 }
