@@ -316,16 +316,18 @@ export default function Home() {
 
           <div>
             <label style={{ fontSize: '0.85rem', color: '#94a3b8', display: 'block', marginBottom: '6px' }}>{t.selectLanguage}</label>
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              style={{ background: '#0f172a', color: '#cbd5e1', border: '1px solid #475569', padding: '9px 14px', borderRadius: '8px', fontSize: '0.85rem', outline: 'none' }}
-            >
-              <option value="auto">{t.autoDetect}</option>
-              <option value="cpp">C++</option>
-              <option value="javascript">JavaScript</option>
-              <option value="sql">SQL</option>
-            </select>
+         <select
+  value={language}
+  onChange={(e) => setLanguage(e.target.value)}
+  style={{ background: '#0f172a', color: '#cbd5e1', border: '1px solid #475569', padding: '9px 14px', borderRadius: '8px', fontSize: '0.85rem', outline: 'none' }}
+>
+  <option value="auto">{uiLang === 'ar' ? 'تلقائي (Auto-Detect)' : 'Auto-Detect'}</option>
+  <option value="python">Python 🐍</option>
+  <option value="javascript">JavaScript / TypeScript 🌐</option>
+  <option value="cpp">C++ / C ⚙️</option>
+  <option value="java">Java / C# ☕</option>
+  <option value="sql">SQL 📊</option>
+</select>
           </div>
 
           <div>
