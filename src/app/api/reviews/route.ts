@@ -1,14 +1,11 @@
+export const dynamic = 'force-dynamic';
+import { db } from '../../../lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { PrismaClient } from '@prisma/client';
-
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
-const prisma = globalForPrisma.prisma ?? new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 export async function GET(req: NextRequest) {
   try {
-    // 1. التحقق من تسجل دخول المستخدم
+    // 1. التحقق من تسجيل دخول المستخدم
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -20,8 +17,8 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const pageSize = 20;
 
-    // 3. البحث عن المستخدم في قاعدة البيانات عبر clerkId
-    const user = await prisma.user.findUnique({ where: { clerkId: userId } });
+    // 3. البحث عن المستخدم في قاعدة البيانات عبر clerkId (تم تغيير prisma إلى db)
+    const user = await db.user.findUnique({ where: { clerkId: userId } });
     if (!user) {
       return NextResponse.json({ reviews: [], total: 0 });
     }
@@ -32,15 +29,15 @@ export async function GET(req: NextRequest) {
       where.target = target;
     }
 
-    // 5. جلب المراجعات وإجمالي العدد بالتوازي
+    // 5. جلب المراجعات وإجمالي العدد بالتوازي (تم تغيير prisma إلى db)
     const [reviews, total] = await Promise.all([
-      prisma.review.findMany({
+      db.review.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-      prisma.review.count({ where }),
+      db.review.count({ where }),
     ]);
 
     // 6. إرجاع النتيجة
