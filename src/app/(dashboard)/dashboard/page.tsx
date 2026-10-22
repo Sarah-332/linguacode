@@ -2,8 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import dynamicImport from 'next/dynamic';
 import { UserButton, SignedIn, SignedOut, SignInButton } from '@clerk/nextjs';
-import Editor from '@monaco-editor/react';
+
+// استيراد محرر Monaco بشكل ديناميكي لتجنب مشاكل الـ SSR أثناء البناء
+const Editor = dynamicImport(() => import('@monaco-editor/react'), { ssr: false });
 
 const monacoLanguageMap: Record<string, string> = {
   cpp: 'cpp',
