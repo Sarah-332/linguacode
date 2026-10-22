@@ -1,11 +1,7 @@
 export const dynamic = 'force-dynamic';
+import { db } from '../../../../lib/db';
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { PrismaClient } from '@prisma/client';
-
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
-const db = globalForPrisma.prisma ?? new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db;
 
 // ─── Style Prompts for Linguacode ───
 const stylePrompts: Record<string, { ar: string; en: string }> = {
