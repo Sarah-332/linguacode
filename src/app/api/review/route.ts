@@ -1,12 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { PrismaClient } from '@prisma/client';
-
-
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
-const db = globalForPrisma.prisma ?? new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db;
+import { db } from '../../../lib/db';
 
 // ─── Extended Corporate & Specialist Prompts ───
 const stylePrompts: Record<string, { ar: string; en: string }> = {
@@ -63,7 +58,8 @@ export async function POST(req: Request) {
 
     const userMessageContent = `
 CRITICAL TASK FOR TARGET: ${target.toUpperCase()}
-1. FULLY REFACTOR AND CORRECT the source code to meet top-tier ${target.toUpperCase()} corporate standards.
+1. FULLY REFACTOR AND CORRECT the source code to meet top-tier 
+${target.toUpperCase()} corporate standards.
 2. AUDIT NON-NATIVE ENGLISH: Identify and fix non-native English phrasing, poor grammar, mixed-language comments, or confusing variable names.
 3. PROVIDE AN "interview_pitch": 2-3 native English sentences explaining what the code does, designed for an interview setting.
 4. RETURN A STRICT JSON OBJECT:
@@ -94,8 +90,8 @@ ${code}
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4o', // ترقية النموذج لقوة تحليل قصوى
-        temperature: 0.3, // قيمة دقيقة لنتائج هندسية ولغوية صارمة
+        model: 'openai/gpt-4o',
+        temperature: 0.3,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessageContent },
