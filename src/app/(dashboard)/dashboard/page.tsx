@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 'use client';
 
 import { useState } from 'react';
@@ -133,18 +132,7 @@ export default function Home() {
             </select>
           </div>
         </div>
-<div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-  <SignedIn>
-    <UserButton />
-  </SignedIn>
-  <SignedOut>
-    <SignInButton mode="modal">
-      <button style={{ backgroundColor: '#6366f1', color: '#fff', padding: '6px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
-        تسجيل الدخول
-      </button>
-    </SignInButton>
-  </SignedOut>
-</div>
+
         {/* Monaco Editor Replacement */}
         <div style={{ marginBottom: '20px', border: '1px solid #334155', borderRadius: '12px', overflow: 'hidden' }}>
           <Editor
