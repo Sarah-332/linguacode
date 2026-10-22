@@ -1,12 +1,7 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { PrismaClient } from '@prisma/client';
-
-
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
-export const dynamic = 'force-dynamic';
-const prisma = globalForPrisma.prisma ?? new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+import { db } from '../../../../lib/db';
 
 export async function DELETE(
   req: Request,
@@ -19,15 +14,15 @@ export async function DELETE(
   const resolvedParams = await Promise.resolve(params);
   const reviewId = resolvedParams.id;
 
-  const review = await prisma.review.findUnique({ where: { id: reviewId } });
+  const review = await db.review.findUnique({ where: { id: reviewId } });
   if (!review) return NextResponse.json({ error: 'Review not found' }, { status: 404 });
 
-  const user = await prisma.user.findUnique({ where: { clerkId: userId } });
+  const user = await db.user.findUnique({ where: { clerkId: userId } });
   if (!user || review.userId !== user.id) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  await prisma.review.delete({ where: { id: reviewId } });
+  await db.review.delete({ where: { id: reviewId } });
 
   return NextResponse.json({ success: true });
 }
